@@ -562,13 +562,6 @@ impl FetchAgent {
         let author_email = lines.next().unwrap_or("unknown@localhost").trim();
         let commit_subject = lines.next().unwrap_or("No Subject").trim();
 
-        // Use MR title if provided, otherwise use commit subject
-        let subject = if let (Some(title), Some(number)) = (mr_title, mr_number) {
-            format!("!{}: {}", number, title)
-        } else {
-            commit_subject.to_string()
-        };
-
         // Body is the rest
         let body: Vec<&str> = lines.collect();
         let message = body.join("\n").trim().to_string();
@@ -579,7 +572,7 @@ impl FetchAgent {
             group: "git-fetch".to_string(),
             article_id: article_id.to_string(),
             message_id: String::new(), // Set by caller
-            subject,
+            subject: commit_subject.to_string(),
             author,
             message,
             diff,
@@ -590,6 +583,8 @@ impl FetchAgent {
             index,
             total,
             mr_url: mr_url.cloned(),
+            mr_title: mr_title.cloned(),
+            mr_number,
         })
     }
 }
