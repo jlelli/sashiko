@@ -237,6 +237,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 failed_error: Some(error),
                                 skip_filters: None,
                                 only_filters: None,
+                                mr_url: None,
                             })
                             .await
                         {
@@ -255,6 +256,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         timestamp,
                         index,
                         total,
+                        mr_url,
                     } => {
                         let root_msg_id = format!("{}@sashiko.local", article_id);
 
@@ -299,6 +301,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 failed_error: None,
                                 skip_filters: None,
                                 only_filters: None,
+                                mr_url,
                             })
                             .await
                         {
@@ -358,6 +361,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             failed_error: None,
                                             skip_filters: skip_subjects_clone,
                                             only_filters: only_subjects_clone,
+                                            mr_url: None,
                                         })
                                         .await
                                     {
@@ -412,6 +416,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         failed_error: None,
                                         skip_filters: None,
                                         only_filters: None,
+                                        mr_url: None,
                                     })
                                     .await
                                 {
@@ -576,6 +581,7 @@ async fn process_parsed_article(
         failed_error,
         skip_filters,
         only_filters,
+        mr_url,
     } = article;
 
     // Handle ingestion failure
@@ -854,6 +860,14 @@ async fn process_parsed_article(
             .await
         {
             Ok(Some(patchset_id)) => {
+                // Store MR URL if present
+                if let Some(ref url) = mr_url {
+                    let _ = worker_db.conn.execute(
+                        "UPDATE patchsets SET mr_url = ? WHERE id = ?",
+                        libsql::params![url.clone(), patchset_id],
+                    ).await;
+                }
+
                 for &sid in &subsystem_ids {
                     if let Err(e) = worker_db.add_subsystem_to_patchset(patchset_id, sid).await {
                         error!("Failed to link patchset to subsystem: {}", e);
